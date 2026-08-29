@@ -1,6 +1,6 @@
 # Lending Club Loan Default Prediction
 
-EAS 587 group project. We try to predict if a borrower will default on their Lending Club loan, using loan data from 2014-2017.
+ We try to predict if a borrower will default on their Lending Club loan, using loan data from 2014-2017.
 
 Dataset: https://www.kaggle.com/datasets/ethon0426/lending-club-20072020q1
 
