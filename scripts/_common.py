@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+# Parsing and hashing live in the package so discovery and the cohort build share them.
+from lc_risk.data.io import read_raw_chunks as _read_raw_chunks
+from lc_risk.data.io import sha256_file
+from lc_risk.data.parsing import parse_month as parse_issue_date
+from lc_risk.data.parsing import parse_percent, parse_term_months
+
+# Re-exported for the discovery scripts.
+__all__ = ["parse_issue_date", "parse_percent", "parse_term_months", "sha256_file"]
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = ROOT / "data" / "raw"
@@ -27,14 +35,6 @@ def ensure_output_dirs() -> None:
         path.mkdir(parents=True, exist_ok=True)
 
 
-def sha256_file(path: Path, block_size: int = 16 * 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while block := handle.read(block_size):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def detect_file_format(path: Path) -> str:
     with path.open("rb") as handle:
         prefix = handle.read(4)
@@ -51,27 +51,7 @@ def read_raw_chunks(
     usecols: Iterable[str] | None = None,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
 ):
-    """Read the misleadingly named .gzip file as plain CSV chunks."""
-    return pd.read_csv(
-        path,
-        usecols=list(usecols) if usecols is not None else None,
-        chunksize=chunk_size,
-        compression=None,
-        low_memory=False,
-    )
-
-
-def parse_issue_date(series: pd.Series) -> pd.Series:
-    return pd.to_datetime(series, format="%b-%Y", errors="coerce")
-
-
-def parse_term_months(series: pd.Series) -> pd.Series:
-    extracted = series.astype("string").str.extract(r"(\d+)", expand=False)
-    return pd.to_numeric(extracted, errors="coerce").astype("Int64")
-
-
-def parse_percent(series: pd.Series) -> pd.Series:
-    return pd.to_numeric(series.astype("string").str.strip().str.rstrip("%"), errors="coerce")
+    return _read_raw_chunks(path, usecols=usecols, chunk_size=chunk_size)
 
 
 def load_dictionary(path: Path = DICTIONARY_FILE) -> pd.DataFrame:
