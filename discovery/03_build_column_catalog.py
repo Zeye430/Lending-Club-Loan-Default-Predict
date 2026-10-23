@@ -217,7 +217,7 @@ def build_catalog() -> None:
     profile_path = AUDIT_DIR / "raw_column_profile.csv"
     if not profile_path.exists():
         raise FileNotFoundError(
-            f"Missing {profile_path}. Run scripts/02_validate_raw_data.py first."
+            f"Missing {profile_path}. Run discovery/02_validate_raw_data.py first."
         )
 
     profile = pd.read_csv(profile_path)

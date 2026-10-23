@@ -2,10 +2,27 @@
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from importlib import metadata
+from pathlib import Path
 
 from lc_risk.config import ROOT
+
+PACKAGE_DIR = Path(__file__).resolve().parent
+
+
+def source_digest() -> str:
+    """SHA-256 over the package's Python sources.
+
+    Identifies the exact code a model was trained with, even from an uncommitted working
+    tree: anyone can recompute it from a checkout and compare.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(PACKAGE_DIR.rglob("*.py")):
+        digest.update(path.relative_to(PACKAGE_DIR).as_posix().encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
 def git_revision() -> dict[str, str | bool | None]:

@@ -15,6 +15,6 @@ data/interim/
 data/processed/
 
 # generated reports and training outputs
-reports/
-artifacts/
+/reports/
+/artifacts/
 mlruns/
