@@ -6,7 +6,9 @@
 
 ## Why a rebuild
 
-An audit of the original project (`scripts/`) found problems in how the experiment was designed:
+An audit of the raw data and the original project ([`discovery/`](discovery/)) found problems
+in how the experiment was designed. The evidence is in the
+[raw data audit](discovery/reports/data_audit.md) and the [EDA notebook](discovery/eda.ipynb).
 
 - **Right-censored labels.** The 2017 test vintage was only ~71% resolved in the 2020Q3
   snapshot. Keeping only completed loans skewed the sample toward early defaults and early
@@ -51,6 +53,10 @@ uv sync --all-groups --all-extras
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
 
-# data discovery (downloads the Kaggle snapshot into data/raw/)
-uv run python scripts/run_data_discovery.py
+# raw-data audit (downloads the Kaggle snapshot into data/raw/, writes discovery/reports/)
+uv run python discovery/run_data_discovery.py
+
+# build the modeling cohort, then refresh the EDA notebook
+uv run python -m lc_risk.data.cohort
+uv run jupyter nbconvert --to notebook --execute --inplace discovery/eda.ipynb
 ```

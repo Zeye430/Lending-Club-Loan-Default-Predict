@@ -1,6 +1,6 @@
 """Project-wide paths and the cohort/split definition.
 
-The cohort follows the data-discovery audit in ``scripts/``: the 2020Q3 snapshot leaves
+The cohort follows the data-discovery audit in ``discovery/``: the 2020Q3 snapshot leaves
 later and 60-month vintages right-censored, so modeling uses 36-month loans issued
 2013-2016, split by whole issue years.
 
