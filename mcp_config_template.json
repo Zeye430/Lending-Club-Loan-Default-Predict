@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "lending-default": {
-      "command": "python",
-      "args": ["REPLACE_THIS_WITH_YOUR_PROJECT_ROOT/src/mcp/server.py"]
-    }
-  }
-}
