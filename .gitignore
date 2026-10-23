@@ -2,17 +2,19 @@
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
-
-.venv/
-data/raw/
-data/processed/
-reports/
-EAS587_Phase1_Report.pdf
-EAS587 Phase1 Report.md
-model_training_design.md
-pipeline_report.md
-models/mlruns
-
-# Phase 4 - intermediate capture artifacts and Office lock files
-presentation/screenshots/
 ~$*
+
+# environments and tool caches
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# data is downloaded and rebuilt locally, never committed
+data/raw/
+data/interim/
+data/processed/
+
+# generated reports and training outputs
+reports/
+artifacts/
+mlruns/
