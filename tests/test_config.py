@@ -9,3 +9,11 @@ def test_split_years_are_disjoint_and_ordered():
 
 def test_label_statuses_do_not_overlap():
     assert not config.NEGATIVE_STATUSES & config.POSITIVE_STATUSES
+
+
+def test_source_digest_is_stable_and_hex():
+    from lc_risk.provenance import source_digest
+
+    first = source_digest()
+    assert first == source_digest()
+    assert len(first) == 64 and int(first, 16) >= 0
