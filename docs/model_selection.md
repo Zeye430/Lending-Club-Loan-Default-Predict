@@ -32,3 +32,19 @@ on the 2015 validation year.
 5. **The shipped model is exactly the evaluated model**: trained on 2013–14 and calibrated
    on 2015. Refitting on 2013–15 before shipping would produce a model with no held-out
    evidence. That refit is listed as follow-up work in the model card.
+
+## Outcome (run `v2-release`)
+
+Applied to the validation year, before scoring the test year:
+
+| Rule | Validation evidence | Result |
+|---|---|---|
+| 1. Input set A | — | A |
+| 2. Keep constraints unless they cost > 0.005 AUC | unconstrained 0.6989 vs constrained 0.6973 (cost 0.0016) | keep |
+| 3. XGBoost only if it beats logistic | 0.6973 vs 0.6879 | XGBoost |
+
+Shipped: `xgboost_A` → `models/lc-default-risk/` v1.0.0. Test year (scored once): AUC 0.6895.
+
+Reproducibility: the run was repeated from a clean commit (`606dea4`). All six models matched the
+earlier run to five decimals of validation AUC, with identical hyperparameters and calibration.
+Rebuilding the cohort twice produced byte-identical parquet files.

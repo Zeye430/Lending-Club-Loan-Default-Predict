@@ -25,7 +25,9 @@ MODELS_DIR = config.ROOT / "models"
 REPORTS = ("validation_report.md", "test_report.md")
 
 
-def build_metadata(run: dict, model_key: str, name: str, version: str, model) -> dict:
+def build_metadata(
+    run: dict, model_key: str, name: str, version: str, model, diagnostics: dict | None = None
+) -> dict:
     test = run["test"]
     policy = [p for p in test["policy"] if p["ranking"] in (model_key, "LC sub_grade")]
     return {
@@ -60,11 +62,38 @@ def build_metadata(run: dict, model_key: str, name: str, version: str, model) ->
         "code": run.get("code"),
         "libraries": run.get("libraries", {}),
         "cohort": run.get("cohort_manifest"),
+        "diagnostics": diagnostics,
     }
 
 
 def _pct(x: float, digits: int = 1) -> str:
     return f"{100 * x:.{digits}f}%"
+
+
+def _ceiling_section(diag: dict | None) -> list[str]:
+    if not diag:
+        return []
+    curve = " → ".join(f"{c['auc']:.4f} ({c['fraction']:.0%})" for c in diag["learning_curve"])
+    fe, tuning = diag["feature_engineering"], diag["tuning"]
+    return [
+        "## Where the performance ceiling is",
+        "",
+        "Validation-year diagnostics (`lc_risk.training.diagnostics`):",
+        "",
+        "| lever | effect on validation AUC |",
+        "|---|---|",
+        f"| more training rows | {curve}; about {diag['auc_gain_per_doubling']:+.4f} per doubling |",
+        f"| {len(fe['candidates'])} hand-built ratio features | {fe['gain']:+.4f} |",
+        f"| hyperparameter tuning | best of {tuning['trials']} trials was #{tuning['best_trial']}"
+        f" (random warm-up); top-5 spread {tuning['top5_spread']:.4f} |",
+        f"| new information: LC's sub_grade | {diag['lc_rating_gain_validation']:+.4f} |",
+        "",
+        "More rows, more features, and more tuning each add little; new information adds more. "
+        "The ceiling is the information in application-time bureau data for an already-approved "
+        "population, not the model. Gains would come from new sources (cash-flow data, trended "
+        "bureau history, the bureau fields LC added in late 2015) rather than from modeling.",
+        "",
+    ]
 
 
 def model_card(meta: dict) -> str:
@@ -89,6 +118,10 @@ def model_card(meta: dict) -> str:
         f"| {q['quarter']} | {q['loans']:,} | {q['auc']:.3f} | {_pct(q['mean_pd'])} "
         f"| {_pct(q['default_rate'])} |"
         for q in meta["test_stability"]["by_quarter"]
+    )
+    first_q, last_q = (
+        meta["test_stability"]["by_quarter"][0],
+        meta["test_stability"]["by_quarter"][-1],
     )
     cal = t["calibration"]
     code = meta.get("code") or {}
@@ -200,6 +233,7 @@ def model_card(meta: dict) -> str:
         "|---|---|",
         drivers,
         "",
+        *_ceiling_section(meta.get("diagnostics")),
         "## Limitations and risks",
         "",
         "- **Approved loans only.** Rejected applicants are absent from the data, so the model "
@@ -217,11 +251,12 @@ def model_card(meta: dict) -> str:
         "",
         "## Monitoring",
         "",
-        f"Score PSI between validation and test was "
-        f"{meta['test_stability']['score_psi_validation_to_test']:.4f}. In production, track "
-        "input PSI per field and score PSI per batch (alert above 0.25). Inputs alone can look "
-        "stable while outcomes shift, so also compare predicted PD with the realized default "
-        "rate as each vintage matures.",
+        f"Within the test year, AUC fell from {first_q['auc']:.3f} ({first_q['quarter']}) to "
+        f"{last_q['auc']:.3f} ({last_q['quarter']}), while the score PSI between validation and "
+        f"test was only {meta['test_stability']['score_psi_validation_to_test']:.4f}. **Input and "
+        "score drift monitoring alone would not have caught this.** In production, track input "
+        "PSI per field and score PSI per batch (alert above 0.25), and compare predicted PD with "
+        "the realized default rate and AUC as each vintage's labels mature.",
         "",
         "## Follow-up work",
         "",
@@ -248,7 +283,11 @@ def release(run_dir: Path, model_key: str, name: str, version: str, out_root: Pa
     out_dir = out_root / name
     if out_dir.exists():
         shutil.rmtree(out_dir)
-    metadata = save_bundle(model, build_metadata(run, model_key, name, version, model), out_dir)
+    diagnostics_file = run_dir / "diagnostics.json"
+    diagnostics = json.loads(diagnostics_file.read_text()) if diagnostics_file.exists() else None
+    metadata = save_bundle(
+        model, build_metadata(run, model_key, name, version, model, diagnostics), out_dir
+    )
 
     shutil.copytree(run_dir / "figures", out_dir / "figures")
     for report in REPORTS:

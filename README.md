@@ -34,13 +34,32 @@ manifest with raw and output SHA-256 hashes, exclusion counts, and cleaning coun
 | 62 application/bureau inputs, plus `sub_grade` for Model B | Defined once in `src/lc_risk/schema.py` and shared by the cohort build, training, API validation, and monitoring |
 | No pricing or post-origination fields as inputs | `int_rate` and the payment/recovery fields are kept only for evaluation; a test enforces this |
 
+## Results (v1.0.0, out-of-time test on 2016 loans)
+
+[`models/lc-default-risk/`](models/lc-default-risk/model_card.md): XGBoost with monotone
+constraints, Platt-calibrated, **without** LC's grade or interest rate.
+
+| | this model | logistic baseline | LC's own sub-grade |
+|---|---|---|---|
+| AUC | **0.690** | 0.680 | 0.672 |
+| Default rate when approving the best 80% | **12.35%** | 12.55% | 12.73% |
+| Realized return on that book | **+7.06%** | +6.86% | +6.46% |
+
+- Adding LC's `sub_grade` would add +0.012 AUC, so LC knew something the bureau data does not
+  show. It is reported as an ablation and not used, per [rules fixed before testing](docs/model_selection.md).
+- The ceiling is the information in the inputs, not the model: doubling the data adds about
+  +0.005 AUC, ten hand-built features add +0.0015, and tuning the hyperparameters barely matters.
+- Inputs stayed stable through 2016 (score PSI 0.001), yet AUC fell from 0.70 to 0.68 quarter by
+  quarter. Monitoring therefore has to track realized outcomes, not just input drift.
+- Fully reproducible: retraining from a clean commit matched to five decimals.
+
 ## Plan
 
 | Stage | Scope |
 |---|---|
 | M0 ✅ | Project skeleton (uv, package layout, lint, tests) |
 | M1 ✅ | Cohort build: 36-month loans 2013–2016, year-based split, schema checks, data hashes |
-| M2 | Single sklearn pipeline, Model A (no LC rating) vs Model B (+`sub_grade`), calibration, one-shot OOT test |
+| M2 ✅ | Single sklearn pipeline, Model A (no LC rating) vs Model B (+`sub_grade`), calibration, one-shot OOT test |
 | M3 | FastAPI scoring service with reason codes, Docker image |
 | M4 | Tests + GitHub Actions CI/CD, deployment on Render |
 | M5 | Drift monitoring (PSI) with delayed-label simulation |
@@ -55,6 +74,12 @@ uv run ruff check . && uv run ruff format --check .
 
 # raw-data audit (downloads the Kaggle snapshot into data/raw/, writes discovery/reports/)
 uv run python discovery/run_data_discovery.py
+
+# train (Optuna, ~40 min), score the test year once, diagnose the ceiling, release
+uv run python -m lc_risk.training.train --trials 30 --run-id <id>
+uv run python -m lc_risk.training.evaluate --run <id>
+uv run python -m lc_risk.training.diagnostics --run <id>
+uv run python -m lc_risk.training.release --run <id> --model xgboost_A
 
 # build the modeling cohort, then refresh the EDA notebook
 uv run python -m lc_risk.data.cohort
