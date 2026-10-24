@@ -16,7 +16,7 @@ from pathlib import Path
 
 import joblib
 
-from lc_risk import config
+from lc_risk import config, schema
 from lc_risk.bundle import save_bundle
 from lc_risk.features import MONOTONE_DIRECTIONS
 
@@ -26,7 +26,13 @@ REPORTS = ("validation_report.md", "test_report.md")
 
 
 def build_metadata(
-    run: dict, model_key: str, name: str, version: str, model, diagnostics: dict | None = None
+    run: dict,
+    model_key: str,
+    name: str,
+    version: str,
+    model,
+    diagnostics: dict | None = None,
+    changes: str | None = None,
 ) -> dict:
     test = run["test"]
     policy = [p for p in test["policy"] if p["ranking"] in (model_key, "LC sub_grade")]
@@ -39,6 +45,12 @@ def build_metadata(
         "target": f"P({config.TARGET}) for a {config.TERM_MONTHS}-month individual LC loan",
         "input_fields": [f.name for f in model.features.input_fields],
         "feature_names": model.feature_names,
+        "excluded_fields": {
+            k: v
+            for k, v in schema.EXCLUDED_FROM_MODEL.items()
+            if k not in {f.name for f in model.features.input_fields}
+        },
+        "changes": changes,
         "monotone_constraints": {
             k: v for k, v in MONOTONE_DIRECTIONS.items() if k in model.feature_names
         },
@@ -124,6 +136,7 @@ def model_card(meta: dict) -> str:
         meta["test_stability"]["by_quarter"][-1],
     )
     cal = t["calibration"]
+    excluded = meta.get("excluded_fields") or {}
     code = meta.get("code") or {}
     cohort = meta.get("cohort") or {}
 
@@ -138,6 +151,12 @@ def model_card(meta: dict) -> str:
         "use LC's grade or interest rate. Output: a calibrated probability of default (PD) "
         "plus the top risk-increasing factors for that applicant (reason codes).",
         "",
+        *[
+            f"Accepted by the service but deliberately **not** used by the model: `{k}`. {v}"
+            for k, v in excluded.items()
+        ],
+        "" if excluded else None,
+        *(["## Changes in this version", "", meta["changes"], ""] if meta.get("changes") else []),
         f"Algorithm: XGBoost ({meta['params'].get('n_estimators')} trees, max depth "
         f"{meta['params'].get('max_depth')}), with monotone constraints on "
         f"{len(meta['monotone_constraints'])} features, followed by Platt calibration "
@@ -244,8 +263,13 @@ def model_card(meta: dict) -> str:
         "- **Selection-encoded inputs.** `verification_status` reflects LC choosing to verify "
         "riskier applicants; it is predictive but not causal.",
         "- **Fairness.** The data holds no protected attributes, so disparate impact cannot be "
-        "measured directly. `addr_state` can proxy for them; review its contribution before "
-        "any real use.",
+        "measured directly. "
+        + (
+            "`addr_state` is excluded from the model; geography can still leak through "
+            "correlated bureau fields, so monitor approval and default rates by state."
+            if "addr_state" in excluded
+            else "`addr_state` can proxy for them; review its contribution before any real use."
+        ),
         "- **Serialization.** The model is a pickle; it loads only with the pinned "
         "scikit-learn and xgboost versions (checked at load time).",
         "",
@@ -271,10 +295,17 @@ def model_card(meta: dict) -> str:
         f"- Libraries: {', '.join(f'{k} {v}' for k, v in meta['libraries'].items())}",
         "- Full reports: [validation](validation_report.md), [test](test_report.md)",
     ]
-    return "\n".join(lines) + "\n"
+    return "\n".join(line for line in lines if line is not None) + "\n"
 
 
-def release(run_dir: Path, model_key: str, name: str, version: str, out_root: Path) -> Path:
+def release(
+    run_dir: Path,
+    model_key: str,
+    name: str,
+    version: str,
+    out_root: Path,
+    changes: str | None = None,
+) -> Path:
     run = json.loads((run_dir / "run.json").read_text())
     if "test" not in run:
         raise SystemExit("evaluate the run on the test year before releasing")
@@ -286,7 +317,9 @@ def release(run_dir: Path, model_key: str, name: str, version: str, out_root: Pa
     diagnostics_file = run_dir / "diagnostics.json"
     diagnostics = json.loads(diagnostics_file.read_text()) if diagnostics_file.exists() else None
     metadata = save_bundle(
-        model, build_metadata(run, model_key, name, version, model, diagnostics), out_dir
+        model,
+        build_metadata(run, model_key, name, version, model, diagnostics, changes),
+        out_dir,
     )
 
     shutil.copytree(run_dir / "figures", out_dir / "figures")
@@ -302,10 +335,11 @@ def main() -> None:
     parser.add_argument("--run", required=True)
     parser.add_argument("--model", default="xgboost_A")
     parser.add_argument("--name", default=DEFAULT_NAME)
-    parser.add_argument("--version", default="1.0.0")
+    parser.add_argument("--version", required=True)
+    parser.add_argument("--changes", help="markdown describing what changed in this version")
     args = parser.parse_args()
     out = release(config.ARTIFACTS_DIR / "runs" / args.run, args.model, args.name, args.version,
-                  MODELS_DIR)  # fmt: skip
+                  MODELS_DIR, args.changes)  # fmt: skip
     print(f"released {args.model} from run {args.run} -> {out.relative_to(config.ROOT)}")
 
 

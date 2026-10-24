@@ -51,9 +51,13 @@ class FeatureBuilder(TransformerMixin, BaseEstimator):
 
     @property
     def input_fields(self) -> tuple[schema.Field, ...]:
-        return schema.model_inputs(self.include_lc_rating)
+        # Frozen at fit time and pickled with the model, so a released model keeps its
+        # inputs when the schema later changes.
+        frozen = getattr(self, "input_fields_", None)
+        return frozen if frozen is not None else schema.model_inputs(self.include_lc_rating)
 
     def fit(self, X: pd.DataFrame, y=None) -> FeatureBuilder:
+        self.input_fields_ = schema.model_inputs(self.include_lc_rating)
         self.feature_names_out_ = np.array(self._output_columns(), dtype=object)
         return self
 

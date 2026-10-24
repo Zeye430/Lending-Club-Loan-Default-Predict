@@ -132,3 +132,15 @@ def test_card_includes_ceiling_diagnostics_when_present(run_dir, tmp_path):
     assert "performance ceiling" in card
     assert "+0.0105" in card
     assert load_bundle(out).metadata["diagnostics"]["tuning"]["best_trial"] == 4
+
+
+def test_card_lists_excluded_fields_and_changes(run_dir, tmp_path):
+    run, _ = run_dir
+    out = release(run, "xgboost_A", "synthetic-model", "0.2.0", tmp_path, changes="Dropped X.")
+    card = (out / "model_card.md").read_text()
+    metadata = load_bundle(out).metadata
+
+    assert "addr_state" in metadata["excluded_fields"]
+    assert "deliberately **not** used by the model: `addr_state`" in card
+    assert "## Changes in this version\n\nDropped X." in card
+    assert "excluded from the model" in card  # fairness bullet reflects the exclusion

@@ -48,3 +48,22 @@ Shipped: `xgboost_A` → `models/lc-default-risk/` v1.0.0. Test year (scored onc
 Reproducibility: the run was repeated from a clean commit (`606dea4`). All six models matched the
 earlier run to five decimals of validation AUC, with identical hyperparameters and calibration.
 Rebuilding the cohort twice produced byte-identical parquet files.
+
+## Amendment 1 — remove `addr_state` (decided before training v1.1.0)
+
+**Why.** Reviewing v1.0.0's reason codes on sample applicants showed `addr_state` among the
+top three risk factors for four of five applicants. That is a problem for two reasons that
+have nothing to do with test performance:
+
+- geography can proxy for protected characteristics (fair-lending risk);
+- "your state of residence" is neither a specific nor an actionable reason to give an applicant.
+
+**Decision.** `addr_state` stays in the schema, so the service still accepts and validates it
+and monitoring can break results down by state. It is listed in `schema.EXCLUDED_FROM_MODEL`
+and is no longer a model input. The same was done for Model B so the A-vs-B ablation stays
+like-for-like.
+
+**Protocol.** Rules 1–5 above apply unchanged to the new run. This is the **second** use of the
+2016 test year. The decision to drop the field was made from v1.0.0's reason codes, not from
+its test metrics. The v1.0.0 test results stay on record (commit `dfcb634`) so the cost of the
+change can be read directly as v1.1.0 minus v1.0.0.

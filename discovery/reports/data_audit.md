@@ -122,7 +122,7 @@ value means "no such event" and carries signal.
 | Term | 36 months | `src/lc_risk/config.py` |
 | Splits by issue year | train 2013–2014, validation 2015, test 2016 | `src/lc_risk/config.py` |
 | Labels | Charged Off, Default = 1; Fully Paid = 0 | `src/lc_risk/config.py` |
-| Inputs | 62 application/bureau fields (+ `sub_grade` in Model B) | `src/lc_risk/schema.py` |
+| Inputs | 62 application/bureau fields accepted; 61 used by the model (`addr_state` excluded for fairness) (+ `sub_grade` in Model B) | `src/lc_risk/schema.py` |
 | Cleaning rules | null out impossible and sentinel values | `src/lc_risk/data/cohort.py` |
 
 ## 7. What this changes from the v1 course project

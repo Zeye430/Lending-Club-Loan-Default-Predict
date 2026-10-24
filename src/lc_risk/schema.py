@@ -135,11 +135,21 @@ PRICING_COLS = ("int_rate", "installment")
 OUTCOME_COLS = ("loan_status", "funded_amnt", "total_pymnt", "recoveries", "last_pymnt_d")
 
 
+# Accepted and validated (the service records them, monitoring breaks results down by them),
+# but deliberately not given to the model.
+EXCLUDED_FROM_MODEL: dict[str, str] = {
+    "addr_state": (
+        "Geography can proxy for protected characteristics, and state of residence is not a "
+        "specific or actionable reason to give an applicant. Removed in v1.1.0."
+    ),
+}
+
+
 def model_inputs(include_lc_rating: bool) -> tuple[Field, ...]:
-    if include_lc_rating:
-        return (*APPLICATION_FIELDS, LC_RATING_FIELD)
-    return APPLICATION_FIELDS
+    fields = tuple(f for f in APPLICATION_FIELDS if f.name not in EXCLUDED_FROM_MODEL)
+    return (*fields, LC_RATING_FIELD) if include_lc_rating else fields
 
 
-ALL_INPUT_FIELDS = model_inputs(include_lc_rating=True)
+# Everything the cohort carries and the service accepts, whether or not the model uses it.
+ALL_INPUT_FIELDS = (*APPLICATION_FIELDS, LC_RATING_FIELD)
 FIELDS_BY_NAME = {f.name: f for f in ALL_INPUT_FIELDS}

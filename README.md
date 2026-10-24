@@ -31,7 +31,7 @@ manifest with raw and output SHA-256 hashes, exclusion counts, and cleaning coun
 | Issued 2013–2016 | Labels are mature. In 2012, ~30 bureau fields were only partially rolled out (~52% missing), a missingness pattern that never occurs at scoring time |
 | Individual applications | Joint-applicant fields are absent before late 2015 |
 | Split by whole issue year | Train 2013–14 (263k, 13.2% default), validation 2015 (283k, 14.9%), test 2016 (318k, 15.9%) |
-| 62 application/bureau inputs, plus `sub_grade` for Model B | Defined once in `src/lc_risk/schema.py` and shared by the cohort build, training, API validation, and monitoring |
+| 62 application/bureau fields accepted; 61 used by the model (+ `sub_grade` for Model B) | Defined once in `src/lc_risk/schema.py` and shared by the cohort build, training, API validation, and monitoring. `addr_state` is accepted but excluded from the model for fairness ([amendment](docs/model_selection.md#amendment-1--remove-addr_state-decided-before-training-v110)) |
 | No pricing or post-origination fields as inputs | `int_rate` and the payment/recovery fields are kept only for evaluation; a test enforces this |
 
 ## Results (v1.0.0, out-of-time test on 2016 loans)
