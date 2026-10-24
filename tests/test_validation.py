@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from lc_risk.data.validation import validate_inputs
+from lc_risk.data.validation import check_nullability, validate_inputs
 from lc_risk.schema import Field
 
 FIELDS = (
@@ -39,3 +39,11 @@ def test_detects_unknown_category_and_missing_column():
 def test_detects_wrong_dtypes():
     problems = validate_inputs(frame(amount=["10", "x"], opened=["2015-01", "x"]), FIELDS)
     assert {p.field for p in problems} == {"amount", "opened"}
+
+
+def test_nullability_contract():
+    fields = (Field("always", "numeric", ""), Field("sometimes", "numeric", "", nullable=True))
+    frame = pd.DataFrame({"always": [1.0] * 99 + [np.nan], "sometimes": [np.nan] * 100})
+    assert check_nullability(frame, fields, max_missing_rate=0.02) == []
+    [problem] = check_nullability(frame, fields, max_missing_rate=0.005)
+    assert problem.field == "always" and problem.count == 1

@@ -108,3 +108,39 @@ def test_release_produces_a_loadable_bundle_and_card(run_dir, tmp_path):
     assert not re.search(r"\bnan\b", card, re.IGNORECASE), "unformatted missing value in card"
     assert (out / "figures" / "approval_test.png").exists()
     assert (out / "test_report.md").exists()
+
+
+def test_card_includes_ceiling_diagnostics_when_present(run_dir, tmp_path):
+    run, _ = run_dir
+    diagnostics = {
+        "learning_curve": [
+            {"fraction": 0.5, "rows": 750, "auc": 0.80, "trees": 10},
+            {"fraction": 1.0, "rows": 1500, "auc": 0.81, "trees": 20},
+        ],
+        "auc_gain_per_doubling": 0.01,
+        "feature_engineering": {"gain": 0.001, "candidates": ["a", "b"]},
+        "tuning": {"trials": 30, "best_trial": 4, "top5_spread": 0.0009},
+        "lc_rating_gain_validation": 0.0105,
+    }
+    (run / "diagnostics.json").write_text(json.dumps(diagnostics))
+    try:
+        out = release(run, "xgboost_A", "synthetic-model", "0.1.0", tmp_path)
+    finally:
+        (run / "diagnostics.json").unlink()
+
+    card = (out / "model_card.md").read_text()
+    assert "performance ceiling" in card
+    assert "+0.0105" in card
+    assert load_bundle(out).metadata["diagnostics"]["tuning"]["best_trial"] == 4
+
+
+def test_card_lists_excluded_fields_and_changes(run_dir, tmp_path):
+    run, _ = run_dir
+    out = release(run, "xgboost_A", "synthetic-model", "0.2.0", tmp_path, changes="Dropped X.")
+    card = (out / "model_card.md").read_text()
+    metadata = load_bundle(out).metadata
+
+    assert "addr_state" in metadata["excluded_fields"]
+    assert "deliberately **not** used by the model: `addr_state`" in card
+    assert "## Changes in this version\n\nDropped X." in card
+    assert "excluded from the model" in card  # fairness bullet reflects the exclusion

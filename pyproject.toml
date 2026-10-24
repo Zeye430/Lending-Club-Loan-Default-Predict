@@ -8,10 +8,12 @@ dependencies = [
     "joblib>=1.4",
     "numpy>=2.0",
     "pandas>=2.2",
-    "pyarrow>=17",
     "pydantic>=2.8",
     "scikit-learn>=1.5",
-    "xgboost>=2.1",
+    # Same `xgboost` module either way; on Linux (CI, Docker) the CPU-only build avoids
+    # ~250 MB of CUDA/NCCL libraries.
+    "xgboost>=2.1; sys_platform != 'linux'",
+    "xgboost-cpu>=2.1; sys_platform == 'linux'",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +27,7 @@ serve = [
 # Data discovery, training, and evaluation. Never installed in the serving image.
 train = [
     "ipykernel>=7.4.0",
+    "pyarrow>=17",
     "kagglehub>=1.0",
     "matplotlib>=3.9",
     "nbconvert>=7.17.2",

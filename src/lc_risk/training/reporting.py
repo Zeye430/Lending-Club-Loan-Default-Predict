@@ -16,7 +16,9 @@ from lc_risk.evaluation import approval_curve, calibration_table
 
 def md_table(frame: pd.DataFrame, floatfmt: str = "{:.4f}") -> str:
     def fmt(value):
-        return floatfmt.format(value) if isinstance(value, float | np.floating) else str(value)
+        if isinstance(value, float | np.floating):
+            return "—" if np.isnan(value) else floatfmt.format(value)
+        return str(value)
 
     header = "| " + " | ".join(map(str, frame.columns)) + " |"
     divider = "|" + "---|" * len(frame.columns)

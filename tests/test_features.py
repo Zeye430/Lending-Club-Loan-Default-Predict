@@ -73,3 +73,21 @@ def test_monotone_directions_reference_real_features(applications):
     names = list(FeatureBuilder(include_lc_rating=True).fit(frame).get_feature_names_out())
     assert set(MONOTONE_DIRECTIONS) <= set(names)
     assert monotone_constraints(names) == MONOTONE_DIRECTIONS
+
+
+def test_fitted_builder_keeps_its_inputs_when_the_schema_changes(applications, monkeypatch):
+    frame, _ = applications
+    builder = FeatureBuilder(include_lc_rating=False).fit(frame)
+    before = builder.transform(frame.head(10))
+
+    reduced = tuple(f for f in schema.model_inputs(False) if f.name != "fico_range_low")
+    monkeypatch.setattr(schema, "model_inputs", lambda include_lc_rating: reduced)
+
+    pd.testing.assert_frame_equal(builder.transform(frame.head(10)), before)
+    assert "fico_range_low" not in FeatureBuilder().fit(frame).get_feature_names_out()
+
+
+def test_excluded_fields_do_not_become_features(applications):
+    frame, _ = applications
+    names = set(FeatureBuilder(include_lc_rating=True).fit(frame).get_feature_names_out())
+    assert not names & set(schema.EXCLUDED_FROM_MODEL)

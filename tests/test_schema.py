@@ -37,3 +37,17 @@ def test_categorical_fields_declare_categories():
         if field.kind == "categorical":
             assert field.categories, field.name
             assert len(field.categories) == len(set(field.categories)), field.name
+
+
+def test_excluded_fields_are_accepted_but_not_model_inputs():
+    accepted = {f.name for f in schema.ALL_INPUT_FIELDS}
+    for include in (False, True):
+        used = {f.name for f in schema.model_inputs(include_lc_rating=include)}
+        assert set(schema.EXCLUDED_FROM_MODEL) <= accepted
+        assert not set(schema.EXCLUDED_FROM_MODEL) & used
+
+
+def test_event_history_fields_are_nullable_and_core_fields_are_not():
+    by_name = schema.FIELDS_BY_NAME
+    assert all(by_name[n].nullable for n in by_name if n.startswith("mths_since_"))
+    assert not any(by_name[n].nullable for n in ("loan_amnt", "annual_inc", "fico_range_low"))

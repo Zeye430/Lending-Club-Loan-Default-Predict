@@ -163,6 +163,8 @@ def build_report(inputs: dict) -> str:
     over_30 = audit["columns_over_30pct_missing"]
 
     n_inputs = len(schema.APPLICATION_FIELDS)
+    n_model = len(schema.model_inputs(include_lc_rating=False))
+    excluded = ", ".join(f"`{name}`" for name in schema.EXCLUDED_FROM_MODEL)
     splits = {
         name: f"{min(years)}–{max(years)}" if len(years) > 1 else str(years[0])
         for name, years in config.SPLIT_YEARS.items()
@@ -252,7 +254,7 @@ value means "no such event" and carries signal.
 | Term | {config.TERM_MONTHS} months | `src/lc_risk/config.py` |
 | Splits by issue year | train {splits["train"]}, validation {splits["validation"]}, test {splits["test"]} | `src/lc_risk/config.py` |
 | Labels | {", ".join(sorted(config.POSITIVE_STATUSES))} = 1; {", ".join(sorted(config.NEGATIVE_STATUSES))} = 0 | `src/lc_risk/config.py` |
-| Inputs | {n_inputs} application/bureau fields (+ `sub_grade` in Model B) | `src/lc_risk/schema.py` |
+| Inputs | {n_inputs} application/bureau fields accepted; {n_model} used by the model ({excluded} excluded for fairness) (+ `sub_grade` in Model B) | `src/lc_risk/schema.py` |
 | Cleaning rules | null out impossible and sentinel values | `src/lc_risk/data/cohort.py` |
 
 ## 7. What this changes from the v1 course project
