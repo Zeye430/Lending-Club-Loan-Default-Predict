@@ -34,21 +34,26 @@ manifest with raw and output SHA-256 hashes, exclusion counts, and cleaning coun
 | 62 application/bureau fields accepted; 61 used by the model (+ `sub_grade` for Model B) | Defined once in `src/lc_risk/schema.py` and shared by the cohort build, training, API validation, and monitoring. `addr_state` is accepted but excluded from the model for fairness ([amendment](docs/model_selection.md#amendment-1--remove-addr_state-decided-before-training-v110)) |
 | No pricing or post-origination fields as inputs | `int_rate` and the payment/recovery fields are kept only for evaluation; a test enforces this |
 
-## Results (v1.0.0, out-of-time test on 2016 loans)
+## Results (v1.1.0, out-of-time test on 2016 loans)
 
 [`models/lc-default-risk/`](models/lc-default-risk/model_card.md): XGBoost with monotone
-constraints, Platt-calibrated, **without** LC's grade or interest rate.
+constraints, Platt-calibrated. It uses **none** of LC's grade, LC's interest rate, or the
+applicant's state.
 
 | | this model | logistic baseline | LC's own sub-grade |
 |---|---|---|---|
-| AUC | **0.690** | 0.680 | 0.672 |
-| Default rate when approving the best 80% | **12.35%** | 12.55% | 12.73% |
-| Realized return on that book | **+7.06%** | +6.86% | +6.46% |
+| AUC | **0.688** | 0.679 | 0.672 |
+| Default rate when approving the best 80% | **12.34%** | 12.57% | 12.73% |
+| Realized return on that book | **+7.06%** | +6.84% | +6.46% |
 
+- **Fairness fix with almost no cost.** v1.0.0's reason codes often blamed the applicant's
+  state. Dropping `addr_state` ([amendment](docs/model_selection.md#amendment-1--remove-addr_state-decided-before-training-v110))
+  cost −0.0011 AUC (95% CI −0.0018 to −0.0004) and left the lending outcomes unchanged. The
+  most frequent reasons are now FICO, DTI, recent account openings, and loan-to-income.
 - Adding LC's `sub_grade` would add +0.012 AUC, so LC knew something the bureau data does not
   show. It is reported as an ablation and not used, per [rules fixed before testing](docs/model_selection.md).
 - The ceiling is the information in the inputs, not the model: doubling the data adds about
-  +0.005 AUC, ten hand-built features add +0.0015, and tuning the hyperparameters barely matters.
+  +0.004 AUC, ten hand-built features add +0.0014, and tuning the hyperparameters barely matters.
 - Inputs stayed stable through 2016 (score PSI 0.001), yet AUC fell from 0.70 to 0.68 quarter by
   quarter. Monitoring therefore has to track realized outcomes, not just input drift.
 - Fully reproducible: retraining from a clean commit matched to five decimals.
@@ -79,7 +84,7 @@ uv run python discovery/run_data_discovery.py
 uv run python -m lc_risk.training.train --trials 30 --run-id <id>
 uv run python -m lc_risk.training.evaluate --run <id>
 uv run python -m lc_risk.training.diagnostics --run <id>
-uv run python -m lc_risk.training.release --run <id> --model xgboost_A
+uv run python -m lc_risk.training.release --run <id> --model xgboost_A --version <x.y.z>
 
 # build the modeling cohort, then refresh the EDA notebook
 uv run python -m lc_risk.data.cohort

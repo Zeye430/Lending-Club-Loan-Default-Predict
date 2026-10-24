@@ -156,13 +156,13 @@ def model_card(meta: dict) -> str:
             for k, v in excluded.items()
         ],
         "" if excluded else None,
-        *(["## Changes in this version", "", meta["changes"], ""] if meta.get("changes") else []),
         f"Algorithm: XGBoost ({meta['params'].get('n_estimators')} trees, max depth "
         f"{meta['params'].get('max_depth')}), with monotone constraints on "
         f"{len(meta['monotone_constraints'])} features, followed by Platt calibration "
         f"(slope {meta['calibration']['slope']:.3f}, intercept "
         f"{meta['calibration']['intercept']:+.3f}).",
         "",
+        *(["## Changes in this version", "", meta["changes"], ""] if meta.get("changes") else []),
         "## Intended use",
         "",
         "- Ranking and pricing support for 36-month unsecured personal loans similar to LC's "

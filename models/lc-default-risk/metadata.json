@@ -1,8 +1,8 @@
 {
   "name": "lc-default-risk",
-  "version": "1.0.0",
-  "released_at": "2026-10-23T13:45:35+00:00",
-  "run_id": "v2-release",
+  "version": "1.1.0",
+  "released_at": "2026-10-24T01:33:21+00:00",
+  "run_id": "v1.1-no-state",
   "model_key": "xgboost_A",
   "target": "P(default) for a 36-month individual LC loan",
   "input_fields": [
@@ -12,7 +12,6 @@
     "home_ownership",
     "annual_inc",
     "verification_status",
-    "addr_state",
     "dti",
     "fico_range_low",
     "earliest_cr_line",
@@ -76,7 +75,6 @@
     "home_ownership",
     "annual_inc",
     "verification_status",
-    "addr_state",
     "dti",
     "fico_range_low",
     "open_acc",
@@ -134,6 +132,10 @@
     "credit_history_months",
     "loan_to_income"
   ],
+  "excluded_fields": {
+    "addr_state": "Geography can proxy for protected characteristics, and state of residence is not a specific or actionable reason to give an applicant. Removed in v1.1.0."
+  },
+  "changes": "Removed `addr_state` from the model inputs for fair-lending and explainability reasons ([amendment 1](../../docs/model_selection.md#amendment-1--remove-addr_state-decided-before-training-v110)). In v1.0.0 it appeared among the top three reason codes for most applicants. Cost on the 2016 test year: AUC 0.6895 \u2192 0.6884 (paired bootstrap difference \u22120.0011, 95% CI \u22120.0018 to \u22120.0004). Lending outcomes are unchanged: at 80% approval the default rate is 12.35% \u2192 12.34% and the realized return is +7.06% in both versions. Fitted models now store their input field list, so later schema changes cannot alter a released model.",
   "monotone_constraints": {
     "fico_range_low": -1,
     "annual_inc": -1,
@@ -156,68 +158,68 @@
     "colsample_bytree": 0.43903095579116774,
     "reg_lambda": 36.39264345367791,
     "reg_alpha": 7.286653737491043,
-    "n_estimators": 962
+    "n_estimators": 865
   },
   "calibration": {
-    "slope": 0.9430006146430969,
-    "intercept": 0.0025010774843394756
+    "slope": 0.948300838470459,
+    "intercept": 0.013560128398239613
   },
   "validation": {
-    "auc": 0.6972548795394599,
-    "gini": 0.3945097590789197,
-    "ks": 0.285728139908936,
-    "average_precision": 0.2786217635620077,
+    "auc": 0.695946170511086,
+    "gini": 0.39189234102217196,
+    "ks": 0.28450252515682833,
+    "average_precision": 0.2770165900035911,
     "raw_calibration": {
-      "brier": 0.11881613731384277,
-      "ece": 0.011949820826913253,
-      "mean_predicted": 0.1378231942653656,
+      "brier": 0.11893941462039948,
+      "ece": 0.011903920217895993,
+      "mean_predicted": 0.1375279575586319,
       "observed_rate": 0.14892165664077134
     },
     "platt": {
-      "slope": 0.9430006146430969,
-      "intercept": 0.0025010774843394756
+      "slope": 0.948300838470459,
+      "intercept": 0.013560128398239613
     }
   },
   "test": {
     "rows": 318223,
     "default_rate": 0.15884772627999863,
-    "auc": 0.6895171966994167,
-    "gini": 0.3790343933988334,
-    "ks": 0.274206193808284,
-    "average_precision": 0.2872470279541616,
+    "auc": 0.6883890575053462,
+    "gini": 0.37677811501069236,
+    "ks": 0.27150884579929513,
+    "average_precision": 0.2864134941106734,
     "calibration": {
-      "brier": 0.12548312544822693,
-      "ece": 0.012088702546106573,
-      "mean_predicted": 0.14723972976207733,
+      "brier": 0.12555935978889465,
+      "ece": 0.012031996270847408,
+      "mean_predicted": 0.147188201546669,
       "observed_rate": 0.15884772627999863
     },
     "raw_calibration": {
-      "brier": 0.12591096758842468,
-      "ece": 0.02276396850922862,
-      "mean_predicted": 0.13608375191688538,
+      "brier": 0.12599904835224152,
+      "ece": 0.02308840452613631,
+      "mean_predicted": 0.13575933873653412,
       "observed_rate": 0.15884772627999863
     }
   },
   "test_benchmarks": {
     "logistic_A": {
-      "auc": 0.6804348971412313,
-      "gini": 0.3608697942824626
+      "auc": 0.6790257411335084,
+      "gini": 0.3580514822670169
     },
     "logistic_B": {
-      "auc": 0.6966138699209891,
-      "gini": 0.3932277398419781
+      "auc": 0.6954995340518312,
+      "gini": 0.39099906810366236
     },
     "xgboost_A_unconstrained": {
-      "auc": 0.6900469362830294,
-      "gini": 0.38009387256605875
+      "auc": 0.6885981351082205,
+      "gini": 0.3771962702164411
     },
     "xgboost_B": {
-      "auc": 0.7012349842810905,
-      "gini": 0.4024699685621811
+      "auc": 0.7003706167980484,
+      "gini": 0.4007412335960967
     },
     "xgboost_B_unconstrained": {
-      "auc": 0.701678596092617,
-      "gini": 0.4033571921852339
+      "auc": 0.700398072494332,
+      "gini": 0.4007961449886639
     },
     "lc_sub_grade": {
       "auc": 0.6723395854966623,
@@ -226,19 +228,19 @@
   },
   "test_comparisons": {
     "B_vs_A_xgboost (value of LC sub_grade)": {
-      "difference": 0.011717787581673855,
-      "ci_low": 0.01049629995239458,
-      "ci_high": 0.012823864605199025
+      "difference": 0.01198155929270217,
+      "ci_low": 0.010911376613477306,
+      "ci_high": 0.012993324259699002
     },
     "xgboost_vs_logistic_A": {
-      "difference": 0.009082299558185403,
-      "ci_low": 0.007998359894242055,
-      "ci_high": 0.010124955898942745
+      "difference": 0.009363316371837738,
+      "ci_low": 0.008226156304485843,
+      "ci_high": 0.01034232238818937
     },
     "unconstrained_vs_monotone_A": {
-      "difference": 0.0005297395836126872,
-      "ci_low": -0.00013263187646558595,
-      "ci_high": 0.0010131705077984694
+      "difference": 0.0002090776028743635,
+      "ci_low": -0.0002408317154356604,
+      "ci_high": 0.0006725551988958551
     }
   },
   "test_policy": [
@@ -269,20 +271,20 @@
     {
       "ranking": "xgboost_A",
       "approval_rate": 0.7,
-      "bad_rate": 0.11058736913932733,
-      "realized_return": 0.07321175373424094
+      "bad_rate": 0.1108971251054966,
+      "realized_return": 0.0731726777924746
     },
     {
       "ranking": "xgboost_A",
       "approval_rate": 0.8,
-      "bad_rate": 0.12353384817226941,
-      "realized_return": 0.07059975794876072
+      "bad_rate": 0.12344743064993834,
+      "realized_return": 0.07060843630522906
     },
     {
       "ranking": "xgboost_A",
       "approval_rate": 0.9,
-      "bad_rate": 0.1383060813335149,
-      "realized_return": 0.06671805171305234
+      "bad_rate": 0.13841781278696652,
+      "realized_return": 0.0667332416450861
     },
     {
       "ranking": "xgboost_A",
@@ -292,7 +294,7 @@
     }
   ],
   "test_stability": {
-    "score_psi_validation_to_test": 0.0013352664369811707,
+    "score_psi_validation_to_test": 0.0013079222684997311,
     "input_psi_top": [
       {
         "field": "purpose",
@@ -331,54 +333,54 @@
       {
         "quarter": "2016Q1",
         "loans": 94592,
-        "auc": 0.7016699970653032,
-        "mean_pd": 0.1480463296175003,
+        "auc": 0.7011980298833549,
+        "mean_pd": 0.1480405479669571,
         "default_rate": 0.15571084235453314
       },
       {
         "quarter": "2016Q2",
         "loans": 73666,
-        "auc": 0.6932355690382378,
-        "mean_pd": 0.14890728890895844,
+        "auc": 0.6920941060215865,
+        "mean_pd": 0.1490013301372528,
         "default_rate": 0.1612820025520593
       },
       {
         "quarter": "2016Q3",
         "loans": 73574,
-        "auc": 0.6819201408550172,
-        "mean_pd": 0.14955101907253265,
+        "auc": 0.6793728808884036,
+        "mean_pd": 0.1493084728717804,
         "default_rate": 0.1664310761953951
       },
       {
         "quarter": "2016Q4",
         "loans": 76391,
-        "auc": 0.6773727812858932,
-        "mean_pd": 0.14240683615207672,
+        "auc": 0.676754280644949,
+        "mean_pd": 0.14234226942062378,
         "default_rate": 0.1530808603107696
       }
     ]
   },
   "top_drivers": {
-    "fico_range_low": 0.20061999559402466,
-    "dti": 0.1455399990081787,
-    "acc_open_past_24mths": 0.13964000344276428,
-    "loan_to_income": 0.13152000308036804,
-    "annual_inc": 0.11422000080347061,
-    "num_tl_op_past_12m": 0.09489999711513519,
-    "percent_bc_gt_75": 0.09483999758958817,
-    "total_il_high_credit_limit": 0.09432999789714813,
-    "addr_state": 0.09158000349998474,
-    "purpose": 0.08508999645709991,
-    "loan_amnt": 0.08188000321388245,
-    "home_ownership": 0.08034999668598175,
-    "bc_util": 0.0701799988746643,
-    "mths_since_recent_inq": 0.0700799971818924,
-    "pct_tl_nvr_dlq": 0.06763999909162521
+    "fico_range_low": 0.19565999507904053,
+    "dti": 0.14176000654697418,
+    "acc_open_past_24mths": 0.13752999901771545,
+    "loan_to_income": 0.128370001912117,
+    "annual_inc": 0.11885999888181686,
+    "num_tl_op_past_12m": 0.1001800000667572,
+    "total_il_high_credit_limit": 0.09568999707698822,
+    "percent_bc_gt_75": 0.09141000360250473,
+    "home_ownership": 0.08545000106096268,
+    "purpose": 0.0844699963927269,
+    "loan_amnt": 0.08363000303506851,
+    "bc_open_to_buy": 0.0793600007891655,
+    "bc_util": 0.07486999779939651,
+    "mths_since_recent_inq": 0.07136999815702438,
+    "mo_sin_rcnt_rev_tl_op": 0.06919000297784805
   },
   "code": {
-    "commit": "606dea4e8e106a26f503b80e86c3e8aefa15f96e",
+    "commit": "ae4c804834e004e9098f2a886f80152019d6ac50",
     "dirty": false,
-    "source_sha256": "232b7aaf88798adcba8da72bd87dd1f5fdc62cb6c0bc31c6ac61c4d0b40a412f"
+    "source_sha256": "04c16db0d2bf9a252c1154fcb2623721a93f8b9214afe4f06a916b97fbbea703"
   },
   "libraries": {
     "scikit-learn": "1.9.1",
@@ -398,33 +400,33 @@
       {
         "fraction": 0.1,
         "rows": 26299,
-        "auc": 0.6817987206610747,
-        "trees": 256
+        "auc": 0.6824372732376304,
+        "trees": 215
       },
       {
         "fraction": 0.25,
         "rows": 65748,
-        "auc": 0.6894602788979628,
+        "auc": 0.6889757755874769,
         "trees": 432
       },
       {
         "fraction": 0.5,
         "rows": 131496,
-        "auc": 0.6939672680707558,
-        "trees": 648
+        "auc": 0.692728350871986,
+        "trees": 589
       },
       {
         "fraction": 1.0,
         "rows": 262992,
-        "auc": 0.6969018064816199,
-        "trees": 960
+        "auc": 0.6954835575572128,
+        "trees": 818
       }
     ],
-    "auc_gain_per_doubling": 0.004586660082731169,
+    "auc_gain_per_doubling": 0.003946399557321535,
     "feature_engineering": {
-      "base_auc": 0.6969018064816199,
-      "with_candidates_auc": 0.6984486275558,
-      "gain": 0.001546821074180027,
+      "base_auc": 0.6954835575572128,
+      "with_candidates_auc": 0.696875045074429,
+      "gain": 0.0013914875172161834,
       "candidates": [
         "revol_bal_to_inc",
         "bureau_debt_to_inc",
@@ -440,11 +442,11 @@
     },
     "tuning": {
       "trials": 30,
-      "completed": 15,
+      "completed": 9,
       "best_trial": 4,
-      "top5_spread": 0.0008678505656438684
+      "top5_spread": 0.0013829428259876098
     },
-    "lc_rating_gain_validation": 0.01057015270026529
+    "lc_rating_gain_validation": 0.01004593084218075
   },
-  "model_sha256": "ea134a6d91448db0fa64d99f96b3f3d83d52c7c539182bbdd27f85ade442a1d3"
+  "model_sha256": "47a18cdd49452c3d412c4c70318779270dc4d6c0ee5b5a2c6cde8a9c371422f5"
 }
