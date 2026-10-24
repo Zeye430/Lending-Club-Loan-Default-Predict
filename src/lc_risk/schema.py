@@ -30,14 +30,24 @@ class Field:
     ge: float | None = None
     le: float | None = None
     categories: tuple[str, ...] = ()
+    # True only where a null is a legitimate, meaningful value: the field is missing for
+    # >= 0.5% of training loans (e.g. no delinquency on file). Every other field was always
+    # present in training, so the API requires it and the cohort build enforces it.
+    nullable: bool = False
 
 
-def _num(name: str, description: str, ge: float | None = 0, le: float | None = None) -> Field:
-    return Field(name, "numeric", description, ge=ge, le=le)
+def _num(
+    name: str,
+    description: str,
+    ge: float | None = 0,
+    le: float | None = None,
+    nullable: bool = False,
+) -> Field:
+    return Field(name, "numeric", description, ge=ge, le=le, nullable=nullable)
 
 
-def _cat(name: str, description: str, categories: tuple[str, ...]) -> Field:
-    return Field(name, "categorical", description, categories=categories)
+def _cat(name: str, description: str, categories: tuple[str, ...], nullable: bool = False) -> Field:
+    return Field(name, "categorical", description, categories=categories, nullable=nullable)
 
 
 HOME_OWNERSHIP = ("MORTGAGE", "RENT", "OWN", "OTHER")
@@ -59,11 +69,16 @@ APPLICATION_FIELDS: tuple[Field, ...] = (
     # loan request and applicant
     _num("loan_amnt", "Requested loan amount (USD).", ge=500, le=40_000),
     _cat("purpose", "Borrower-stated loan purpose.", PURPOSES),
-    _num("emp_length", "Employment length in years; 0 = <1 year, 10 = 10+ years.", le=10),
+    _num(
+        "emp_length",
+        "Employment length in years; 0 = <1 year, 10 = 10+ years; null = not provided.",
+        le=10,
+        nullable=True,
+    ),
     _cat("home_ownership", "Home ownership status.", HOME_OWNERSHIP),
     _num("annual_inc", "Self-reported annual income (USD).", ge=1),
     _cat("verification_status", "Whether income or its source was verified.", VERIFICATION_STATUS),
-    _cat("addr_state", "Borrower state.", US_STATES),
+    _cat("addr_state", "Borrower state.", US_STATES, nullable=True),
     _num("dti", "Monthly debt payments / monthly income, excl. mortgage and this loan (%)."),
     # credit bureau: profile
     _num("fico_range_low", "Lower bound of FICO range at application.", ge=300, le=850),
@@ -79,9 +94,18 @@ APPLICATION_FIELDS: tuple[Field, ...] = (
     _num("total_bal_ex_mort", "Total balance excluding mortgage (USD)."),
     _num("total_bc_limit", "Total bankcard credit limit (USD)."),
     _num("total_il_high_credit_limit", "Total installment credit limit (USD)."),
-    _num("bc_open_to_buy", "Total open-to-buy on revolving bankcards (USD)."),
-    _num("bc_util", "Bankcard balance / limit (%)."),
-    _num("percent_bc_gt_75", "Share of bankcards above 75% of limit (%).", le=100),
+    _num(
+        "bc_open_to_buy",
+        "Total open-to-buy on revolving bankcards (USD); null = no bankcard.",
+        nullable=True,
+    ),
+    _num("bc_util", "Bankcard balance / limit (%); null = no bankcard.", nullable=True),
+    _num(
+        "percent_bc_gt_75",
+        "Share of bankcards above 75% of limit (%); null = no bankcard.",
+        le=100,
+        nullable=True,
+    ),
     _num("mort_acc", "Mortgage accounts."),
     _num("num_actv_bc_tl", "Active bankcard accounts."),
     _num("num_actv_rev_tl", "Active revolving trades."),
@@ -96,23 +120,51 @@ APPLICATION_FIELDS: tuple[Field, ...] = (
     _num("inq_last_6mths", "Inquiries in past 6 months, excl. auto and mortgage."),
     _num("acc_open_past_24mths", "Trades opened in past 24 months."),
     _num("num_tl_op_past_12m", "Accounts opened in past 12 months."),
-    _num("mo_sin_old_il_acct", "Months since oldest installment account opened."),
+    _num(
+        "mo_sin_old_il_acct",
+        "Months since oldest installment account opened; null = none.",
+        nullable=True,
+    ),
     _num("mo_sin_old_rev_tl_op", "Months since oldest revolving account opened."),
     _num("mo_sin_rcnt_rev_tl_op", "Months since most recent revolving account opened."),
     _num("mo_sin_rcnt_tl", "Months since most recent account opened."),
-    _num("mths_since_recent_bc", "Months since most recent bankcard opened."),
-    _num("mths_since_recent_inq", "Months since most recent inquiry; null = none on file."),
+    _num(
+        "mths_since_recent_bc",
+        "Months since most recent bankcard opened; null = no bankcard.",
+        nullable=True,
+    ),
+    _num(
+        "mths_since_recent_inq",
+        "Months since most recent inquiry; null = none on file.",
+        nullable=True,
+    ),
     # credit bureau: delinquency and derogatory history.
     # For the mths_since_* fields, null means no such event on file, not an unknown value.
     _num("delinq_2yrs", "30+ day delinquencies in past 2 years."),
-    _num("mths_since_last_delinq", "Months since last delinquency; null = none."),
-    _num("mths_since_last_major_derog", "Months since last 90+ day rating; null = none."),
-    _num("mths_since_recent_bc_dlq", "Months since last bankcard delinquency; null = none."),
-    _num("mths_since_recent_revol_delinq", "Months since last revolving delinquency; null = none."),
+    _num("mths_since_last_delinq", "Months since last delinquency; null = none.", nullable=True),
+    _num(
+        "mths_since_last_major_derog",
+        "Months since last 90+ day rating; null = none.",
+        nullable=True,
+    ),
+    _num(
+        "mths_since_recent_bc_dlq",
+        "Months since last bankcard delinquency; null = none.",
+        nullable=True,
+    ),
+    _num(
+        "mths_since_recent_revol_delinq",
+        "Months since last revolving delinquency; null = none.",
+        nullable=True,
+    ),
     _num("acc_now_delinq", "Accounts currently delinquent."),
     _num("delinq_amnt", "Past-due amount on currently delinquent accounts (USD)."),
     _num("num_tl_30dpd", "Accounts currently 30 days past due."),
-    _num("num_tl_120dpd_2m", "Accounts currently 120 days past due."),
+    _num(
+        "num_tl_120dpd_2m",
+        "Accounts currently 120 days past due; null = not reported.",
+        nullable=True,
+    ),
     _num("num_tl_90g_dpd_24m", "Accounts 90+ days past due in past 24 months."),
     _num("num_accts_ever_120_pd", "Accounts ever 120+ days past due."),
     _num("pct_tl_nvr_dlq", "Trades never delinquent (%).", le=100),
@@ -120,7 +172,7 @@ APPLICATION_FIELDS: tuple[Field, ...] = (
     _num("collections_12_mths_ex_med", "Collections in past 12 months, excl. medical."),
     _num("tot_coll_amt", "Total collection amounts ever owed (USD)."),
     _num("pub_rec", "Derogatory public records."),
-    _num("mths_since_last_record", "Months since last public record; null = none."),
+    _num("mths_since_last_record", "Months since last public record; null = none.", nullable=True),
     _num("pub_rec_bankruptcies", "Public record bankruptcies."),
     _num("tax_liens", "Tax liens."),
 )

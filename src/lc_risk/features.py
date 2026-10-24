@@ -15,6 +15,11 @@ from lc_risk import schema
 
 DERIVED_FEATURES = ("credit_history_months", "loan_to_income")
 SUB_GRADE_RANK = "sub_grade_rank"
+DERIVED_DESCRIPTIONS = {
+    "credit_history_months": "Months between the earliest credit line and the application.",
+    "loan_to_income": "Requested amount / annual income.",
+    SUB_GRADE_RANK: "LC sub-grade as a rank, A1 = 0 ... G5 = 34.",
+}
 _SUB_GRADE_TO_RANK = {grade: rank for rank, grade in enumerate(schema.SUB_GRADES)}
 
 # Expected direction of risk (+1: higher value -> higher risk), taken from the EDA

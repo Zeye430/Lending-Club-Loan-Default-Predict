@@ -52,3 +52,23 @@ def validate_inputs(frame: pd.DataFrame, fields: Iterable[Field]) -> list[Violat
             violations.append(Violation(field.name, f"non-datetime dtype {values.dtype}", 0))
 
     return violations
+
+
+def check_nullability(
+    frame: pd.DataFrame, fields: Iterable[Field], max_missing_rate: float = 0.005
+) -> list[Violation]:
+    """Non-nullable fields must be (almost) always present.
+
+    The API requires every non-nullable field, so if one goes missing in the data the
+    contract with the model is wrong: either the field should be nullable or the data
+    is broken.
+    """
+    violations = []
+    for field in fields:
+        if field.nullable or field.name not in frame.columns:
+            continue
+        rate = float(frame[field.name].isna().mean())
+        if rate > max_missing_rate:
+            count = int(frame[field.name].isna().sum())
+            violations.append(Violation(field.name, f"non-nullable but {rate:.2%} missing", count))
+    return violations

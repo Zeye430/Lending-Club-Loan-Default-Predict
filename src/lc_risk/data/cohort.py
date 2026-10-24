@@ -23,7 +23,7 @@ import pandas as pd
 from lc_risk import config, schema
 from lc_risk.data.io import read_raw_chunks, sha256_file
 from lc_risk.data.parsing import parse_emp_length, parse_month, parse_percent, parse_term_months
-from lc_risk.data.validation import validate_inputs
+from lc_risk.data.validation import check_nullability, validate_inputs
 from lc_risk.provenance import git_revision, package_versions
 
 log = logging.getLogger(__name__)
@@ -133,6 +133,11 @@ def build_cohort(
     cohort[config.TARGET] = cohort["loan_status"].map(LABELS).astype("int8")
     cohort["split"] = cohort[schema.DATE_COL].dt.year.map(YEAR_TO_SPLIT).astype("string")
     cohort = cohort.sort_values([schema.DATE_COL, schema.ID_COL], ignore_index=True)
+
+    training = cohort[cohort["split"] == "train"]
+    if missing := check_nullability(training, schema.ALL_INPUT_FIELDS):
+        raise ValueError("training data breaks the nullability contract:\n"
+                         + "\n".join(map(str, missing)))  # fmt: skip
 
     first = [schema.ID_COL, schema.DATE_COL, "split", config.TARGET]
     cohort = cohort[first + [c for c in cohort.columns if c not in first]]

@@ -101,3 +101,9 @@ def test_write_cohort_round_trips_with_manifest(raw_csv, tmp_path):
     on_disk = json.loads((tmp_path / "cohort_manifest.json").read_text())
     assert on_disk["cohort_file"]["sha256"] == manifest["cohort_file"]["sha256"]
     assert on_disk["splits"]["validation"]["defaults"] == 1
+
+
+def test_rejects_missing_values_in_non_nullable_fields(tmp_path):
+    raw = write_raw(tmp_path / "raw.csv", [{"issue_d": "Mar-2013", "open_acc": None}])
+    with pytest.raises(ValueError, match="nullability"):
+        build_cohort(raw)

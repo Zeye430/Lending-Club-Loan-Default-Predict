@@ -1,0 +1,10 @@
+# Allowlist: only what the image needs. Data, artifacts, notebooks and .git never enter
+# the build context.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!models/
+**/__pycache__
+**/.DS_Store
