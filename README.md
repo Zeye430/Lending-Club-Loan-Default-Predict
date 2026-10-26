@@ -4,6 +4,10 @@
 > team version (pandas pipeline, Databricks notebooks, Streamlit app, MCP server) is preserved
 > at the git tag [`v1-course-project`](../../tree/v1-course-project).
 
+**Live API:** <https://lending-club-loan-default-predict.onrender.com> (interactive docs). It runs
+on Render's free tier, so the first request after about 15 idle minutes takes 30–60 s while the
+service wakes up.
+
 ## Why a rebuild
 
 An audit of the raw data and the original project ([`discovery/`](discovery/)) found problems
@@ -85,6 +89,23 @@ docker run -p 8000:8000 lc-default-risk        # interactive docs at http://loca
   a non-root user. Single-request latency is p50 19 ms / p95 37 ms in Docker on a laptop, and a
   batch of 1,000 takes about 0.3 s. Each request writes one JSON log line with latency, model
   version, and mean PD, and no applicant data.
+
+## Deployment
+
+```
+push / PR ──► GitHub Actions CI ──► merge to main ──► Render builds the Dockerfile ──► live
+               lint, tests,                            (deploys only after CI passes)
+               image build + smoke test
+```
+
+- **CI** (`.github/workflows/ci.yml`) runs on every push and pull request: lint and format
+  checks, the full test suite against the committed model bundle, then a Docker build. The
+  smoke test starts the container and scores the example application taken from the
+  container's own OpenAPI spec.
+- **CD.** Render builds the repo's `Dockerfile` from `main`, deploys only after CI passes, and
+  uses `/health` as its health check. Render sets `PORT`, which the image reads.
+- **What ships.** The model is whatever is committed under `models/lc-default-risk/`. A new
+  model version is a reviewed commit, with its model card in the same diff.
 
 ## Plan
 

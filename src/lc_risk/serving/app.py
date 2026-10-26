@@ -18,6 +18,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 
 from lc_risk import config
 from lc_risk.bundle import load_bundle
@@ -78,6 +79,10 @@ def create_app(model_dir: Path | None = None) -> FastAPI:
         log.info(json.dumps(record))
         response.headers["x-request-id"] = request_id
         return response
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse("/docs")
 
     @app.get("/health")
     def health() -> dict:

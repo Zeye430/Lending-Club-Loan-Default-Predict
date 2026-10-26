@@ -1,0 +1,57 @@
+name: CI
+
+# Render deploys main only after these checks pass ("Auto-Deploy: After CI Checks Pass").
+on:
+  pull_request:
+  push:
+    branches: [main, rebuild]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.3"
+          enable-cache: true
+      - name: Install locked dependencies
+        run: uv sync --locked --all-groups --all-extras
+      - name: Lint
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Tests (synthetic data + the committed model bundle)
+        run: uv run pytest
+
+  docker:
+    name: image build and smoke test
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t lc-default-risk:ci .
+      - name: Start container
+        run: |
+          docker run -d --name api -p 8000:8000 lc-default-risk:ci
+          for i in $(seq 1 30); do
+            curl -sf localhost:8000/health && exit 0
+            sleep 1
+          done
+          docker logs api
+          exit 1
+      - name: Score the example application from the API's own OpenAPI spec
+        run: |
+          curl -sf localhost:8000/openapi.json \
+            | python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin)["components"]["schemas"]["Application"]["example"]))' \
+            > example.json
+          curl -sf -X POST localhost:8000/predict -H 'content-type: application/json' -d @example.json \
+            | tee response.json
+          python3 -c 'import json; r = json.load(open("response.json")); assert 0 < r["probability_of_default"] < 1 and r["reasons"], r'
+      - name: Container logs
+        if: always()
+        run: docker logs api
