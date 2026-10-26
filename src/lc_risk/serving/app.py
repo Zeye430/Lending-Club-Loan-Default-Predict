@@ -84,9 +84,13 @@ def create_app(model_dir: Path | None = None) -> FastAPI:
     def root() -> RedirectResponse:
         return RedirectResponse("/docs")
 
+    # Render sets RENDER_GIT_COMMIT for Git-backed services; CI polls /health for it to
+    # confirm the commit it tested is the one serving traffic.
+    commit = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GIT_COMMIT")
+
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "model": info.model_dump()}
+        return {"status": "ok", "commit": commit, "model": info.model_dump()}
 
     @app.get("/model")
     def model_info() -> dict:

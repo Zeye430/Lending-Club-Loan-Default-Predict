@@ -55,3 +55,46 @@ jobs:
       - name: Container logs
         if: always()
         run: docker logs api
+
+  deploy:
+    name: deploy to Render
+    needs: [test, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://lending-club-loan-default-predict.onrender.com
+    env:
+      SERVICE_URL: https://lending-club-loan-default-predict.onrender.com
+    steps:
+      - name: Trigger the Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is not set"
+            exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null
+      - name: Wait until the live service runs this commit
+        run: |
+          for i in $(seq 1 60); do
+            live=$(curl -fsS --max-time 60 "$SERVICE_URL/health" \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin).get("commit") or "")' || true)
+            echo "attempt $i: live commit ${live:-unknown}, expected $GITHUB_SHA"
+            [ "$live" = "$GITHUB_SHA" ] && exit 0
+            sleep 15
+          done
+          echo "::error::the live service never reported commit $GITHUB_SHA"
+          exit 1
+      - name: Score the example application on the live service
+        run: |
+          curl -fsS "$SERVICE_URL/openapi.json" \
+            | python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin)["components"]["schemas"]["Application"]["example"]))' \
+            > example.json
+          curl -fsS -X POST "$SERVICE_URL/predict" -H 'content-type: application/json' -d @example.json \
+            | tee response.json
+          python3 -c 'import json; r = json.load(open("response.json")); assert 0 < r["probability_of_default"] < 1, r'
