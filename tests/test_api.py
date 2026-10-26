@@ -55,6 +55,17 @@ def test_committed_bundle_loads_and_scores(bundle, applications):
     assert np.isfinite(pd_).all() and ((pd_ > 0) & (pd_ < 1)).all()
 
 
+def test_root_redirects_to_docs(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307 and response.headers["location"] == "/docs"
+
+
+def test_openapi_carries_the_example_used_by_the_ci_smoke_test(client):
+    example = client.get("/openapi.json").json()["components"]["schemas"]["Application"]["example"]
+    # FastAPI drops null-valued keys from examples; omitted nullable fields mean the same.
+    assert example == {k: v for k, v in EXAMPLE_APPLICATION.items() if v is not None}
+
+
 def test_health_and_model_info(client, bundle):
     assert client.get("/health").json()["status"] == "ok"
     info = client.get("/model").json()
