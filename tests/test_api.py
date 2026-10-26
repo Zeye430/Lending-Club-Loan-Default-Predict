@@ -66,6 +66,12 @@ def test_openapi_carries_the_example_used_by_the_ci_smoke_test(client):
     assert example == {k: v for k, v in EXAMPLE_APPLICATION.items() if v is not None}
 
 
+def test_health_reports_the_deployed_commit(monkeypatch):
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "abc123")
+    health = TestClient(create_app(DEFAULT_MODEL_DIR)).get("/health").json()
+    assert health["commit"] == "abc123"
+
+
 def test_health_and_model_info(client, bundle):
     assert client.get("/health").json()["status"] == "ok"
     info = client.get("/model").json()

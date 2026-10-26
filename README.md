@@ -93,17 +93,22 @@ docker run -p 8000:8000 lc-default-risk        # interactive docs at http://loca
 ## Deployment
 
 ```
-push / PR ──► GitHub Actions CI ──► merge to main ──► Render builds the Dockerfile ──► live
-               lint, tests,                            (deploys only after CI passes)
-               image build + smoke test
+PR ──► CI: lint + tests ──► image build + smoke test ──► merge (blocked unless both pass)
+                                                              │
+main ──► CI again ──► deploy job: Render deploy hook ──► wait for /health to report this
+                                                         commit ──► score a live request
 ```
 
 - **CI** (`.github/workflows/ci.yml`) runs on every push and pull request: lint and format
   checks, the full test suite against the committed model bundle, then a Docker build. The
   smoke test starts the container and scores the example application taken from the
   container's own OpenAPI spec.
-- **CD.** Render builds the repo's `Dockerfile` from `main`, deploys only after CI passes, and
-  uses `/health` as its health check. Render sets `PORT`, which the image reads.
+- **CD.** On `main`, a `deploy` job runs only after both checks pass. It calls Render's deploy
+  hook, polls `/health` until the live service reports the exact commit CI tested, and then
+  scores a request against production. If the deploy did not land, the pipeline goes red. Render
+  builds the repo's `Dockerfile` and injects `PORT`, which the image reads.
+- **Branch protection.** `main` accepts changes only through pull requests whose two checks
+  pass, and force pushes and branch deletion are blocked.
 - **What ships.** The model is whatever is committed under `models/lc-default-risk/`. A new
   model version is a reviewed commit, with its model card in the same diff.
 
