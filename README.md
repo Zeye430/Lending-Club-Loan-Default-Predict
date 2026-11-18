@@ -5,12 +5,12 @@ an out-of-time evaluation fixed in advance, a calibrated XGBoost model with reas
 FastAPI service deployed by CI/CD, and a monitoring replay that shows when a model failure
 would have been caught.
 
-**Live API:** <https://lending-club-loan-default-predict.onrender.com> (interactive docs) ·
+**[Live demo](https://lending-club-loan-default-predict-6jekialmnxiawsqpfusvgd.streamlit.app/)** · **[Live API](https://lending-club-loan-default-predict.onrender.com)** (interactive docs) ·
 [Model card](models/lc-default-risk/model_card.md) ·
 [Monitoring report](docs/monitoring/report.md) · [Architecture](docs/architecture.md)
 
-> The API runs on Render's free tier: the first request after ~15 idle minutes takes 30–60 s
-> while the service wakes up.
+> Both run on free tiers. After a quiet spell, the first visit can take up to a minute while
+> the demo and the API wake up.
 
 ## Results
 

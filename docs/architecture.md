@@ -94,7 +94,7 @@ main ──► same checks ──► deploy: Render hook ──► wait for /hea
 
 ## Demo
 
-`app/` is a Streamlit app deployed on Streamlit Community Cloud. It is a thin HTTP client: it
+`app/` is a Streamlit app deployed on Streamlit Community Cloud ([live](https://lending-club-loan-default-predict-6jekialmnxiawsqpfusvgd.streamlit.app/)). It is a thin HTTP client: it
 installs only `app/requirements.txt`, never loads the model, and builds its form from the API's
 OpenAPI document. Its client is contract-tested against the real API in CI, and a Streamlit
 `AppTest` drives the full UI against the in-process service.
