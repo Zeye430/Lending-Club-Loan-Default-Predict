@@ -90,6 +90,25 @@ docker run -p 8000:8000 lc-default-risk        # interactive docs at http://loca
   batch of 1,000 takes about 0.3 s. Each request writes one JSON log line with latency, model
   version, and mean PD, and no applicant data.
 
+## Monitoring
+
+[Playbook](docs/monitoring/README.md) · [2016 replay report](docs/monitoring/report.md)
+
+Five layers, from fastest to most complete: data quality, input drift, score drift, early
+performance (defaults within 12 months on book, readable about a year after issue), and final
+performance (lifetime outcomes, about 40 months after issue). Replaying 2016 as production
+traffic, one issue month at a time:
+
+- **No data-quality, input-drift or score-drift alert fired in any month.** The applicants
+  looked like 2015, but their outcomes did not.
+- **Early-label AUC flagged the degradation 28 months before lifetime outcomes could.** It was
+  visible in July 2017, while the lifetime AUC showed it in November 2019.
+- The early actual-to-expected ratio overstates level shifts (1.28 vs 1.11 lifetime), because
+  2016 defaults also arrived earlier. The playbook uses it to decide *whether* to
+  recalibrate, and the matured labels to decide *by how much*.
+
+![alert timeline](docs/monitoring/figures/alert_timeline.png)
+
 ## Deployment
 
 ```
@@ -120,8 +139,8 @@ main ──► CI again ──► deploy job: Render deploy hook ──► wait 
 | M1 ✅ | Cohort build: 36-month loans 2013–2016, year-based split, schema checks, data hashes |
 | M2 ✅ | Single sklearn pipeline, Model A (no LC rating) vs Model B (+`sub_grade`), calibration, one-shot OOT test |
 | M3 ✅ | FastAPI scoring service with reason codes, Docker image |
-| M4 | Tests + GitHub Actions CI/CD, deployment on Render |
-| M5 | Drift monitoring (PSI) with delayed-label simulation |
+| M4 ✅ | Tests + GitHub Actions CI/CD, deployment on Render |
+| M5 ✅ | Drift monitoring (PSI) with delayed-label simulation |
 | M6 | Slim Streamlit demo, model card, architecture write-up |
 
 ## Development
@@ -139,6 +158,9 @@ uv run python -m lc_risk.training.train --trials 30 --run-id <id>
 uv run python -m lc_risk.training.evaluate --run <id>
 uv run python -m lc_risk.training.diagnostics --run <id>
 uv run python -m lc_risk.training.release --run <id> --model xgboost_A --version <x.y.z>
+
+# replay 2016 through the monitoring rules (writes docs/monitoring/report.md)
+uv run python -m lc_risk.monitoring.simulate
 
 # serve locally without Docker
 MODEL_DIR=models/lc-default-risk uv run uvicorn --factory lc_risk.serving.app:create_app --reload
